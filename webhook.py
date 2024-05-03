@@ -1,6 +1,6 @@
 from flask import Flask, request, render_template, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import current_user, login_required
+import uuid
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///webhooks.db'
@@ -20,15 +20,19 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        confirm_password = request.form['confirm_password']
         # Check if username already exists
         if User.query.filter_by(username=username).first():
             return 'Username already exists'
+        # Check if passwords match
+        if password != confirm_password:
+            return 'Passwords do not match'
         # Create a new user
         new_user = User(username=username, password=password)
         db.session.add(new_user)
         db.session.commit()
         return redirect(url_for('login'))
-    return render_template('register.html')
+    return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -42,21 +46,22 @@ def login():
             return redirect(url_for('manage_hooks'))
         else:
             return 'Invalid username or password'
-    return render_template('login.html')
+    return render_template('index.html')
 
-
-@login_required
 @app.route('/manage_hooks', methods=['GET', 'POST'])
 def manage_hooks():
     # Handle adding or updating webhook URL
     if request.method == 'POST':
         webhook_url = request.form['webhook_url']
         # Update the webhook URL for the logged-in user
-        current_user.webhook_url = webhook_url
-        db.session.commit()
+        # You need to implement authentication to get the current user
+        # current_user.webhook_url = webhook_url
+        # db.session.commit()
         return redirect(url_for('manage_hooks'))
-    # Display the current webhook URL for the logged-in user
-    return render_template('manage_hooks.html', webhook_url=current_user.webhook_url)
+    # Generate a unique webhook URL for the user
+    unique_webhook_url = f'https://smacforce.com/webhooks/{str(uuid.uuid4())}'
+    # Pass the unique webhook URL to the template
+    return render_template('manage_hooks.html', unique_webhook_url=unique_webhook_url)
 
 # Route for receiving webhook requests
 @app.route('/webhook/<username>', methods=['POST'])
